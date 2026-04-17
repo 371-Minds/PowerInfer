@@ -54,7 +54,7 @@ That makes the project useful when you want to:
 
 https://github.com/SJTU-IPADS/PowerInfer/assets/34213478/fe441a42-5fce-448b-a3e5-ea4abb43ba23
 
-PowerInfer versus llama.cpp on a single RTX 4090 running Falcon(ReLU)-40B-FP16 showed up to an 11x speedup in the original release evaluation.
+PowerInfer versus llama.cpp on a single RTX 4090 running Falcon(ReLU)-40B-FP16 showed up to an 11x token-generation speedup in the original release evaluation.
 
 ## Deployment paths
 
