@@ -231,6 +231,40 @@ For constrained outputs and agent-style integrations, also look at:
 - [SmallThinker install docs](./smallthinker/docs/install.md)
 - [SmallThinker multimodal docs](./smallthinker/docs/multimodal.md)
 
+## Hallucination reduction and cognitive load
+
+PowerInfer's practical low-hallucination path is to reduce generation freedom only as much as the task requires, instead of turning every request into a long-reasoning workflow.
+
+### Practical feature set
+
+- **Constrain the format first.** In the root runtime, use `--grammar` / `--grammar-file` in [`main`](./examples/main/README.md) or the `grammar` field in [`server`](./examples/server/README.md). In SmallThinker, prefer `--json-schema`, `json_schema`, or `response_format` for schema-constrained generation.
+- **Keep answers bounded.** Use short prompts, conservative `n_predict` limits, stop strings, and low-variance sampling for factual QA, extraction, and classification.
+- **Use reasoning only when it earns its cost.** For SmallThinker server workflows, `--reasoning-budget 0` is the default choice for extraction, routing, tool use, and strict structured output; leave reasoning enabled only for tasks that benefit from intermediate deliberation.
+- **Prefer machine-readable contracts for machine consumers.** For agents and apps, use schema-first JSON or function calling instead of free-form prose whenever possible.
+
+### Default low-hallucination path
+
+1. Start with **strict JSON or grammar-constrained output**.
+2. Keep schemas narrow, with required fields and `"additionalProperties": false` when possible, because tighter schemas produce faster grammars and reduce hallucinated keys.
+3. Ask for a **short final answer** when a human is the consumer and formatting flexibility is acceptable.
+4. Escalate to **bounded reasoning** only for tasks like multi-step planning, synthesis, or tool-selection decisions that are measurably better with extra thinking.
+
+### Task-oriented guidance
+
+| Task type | Default mode | Why |
+| --- | --- | --- |
+| Extraction, classification, routing, scoring | Strict JSON / grammar | Highest validity and lowest drift |
+| Tool calling and agent handoffs | Function calling or schema-first JSON | Keeps downstream integrations deterministic |
+| Factual QA for humans | Short answers with bounded length | Reduces latency and discourages speculative elaboration |
+| Harder synthesis or planning | Bounded reasoning, then a short final answer | Gives the model room to work without making long reasoning the default |
+
+### Evaluation tasks to track
+
+- **Hallucination reduction:** compare free-form prompting against constrained-output prompting on extraction, routing, and grounded QA tasks with known answers.
+- **JSON validity:** measure parse success, required-field coverage, and schema compliance for representative server and chat-completions payloads.
+- **Factual consistency:** test short-answer responses against internal documents or benchmark sets where exact-match or citation agreement can be checked.
+- **Latency-quality balance:** track completion latency, output length, and validation pass rate together so low-hallucination defaults stay practical for local inference.
+
 ## Quantization
 
 PowerInfer includes optimized support for INT4 (`Q4_0`) quantization:
