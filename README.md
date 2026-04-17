@@ -7,20 +7,28 @@ PowerInfer is a CPU/GPU LLM inference engine leveraging **activation locality** 
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-[Project Kanban](https://github.com/orgs/SJTU-IPADS/projects/2/views/2)
+## Project Navigation
+
+| Area | Description |
+|------|-------------|
+| **This README** | Core PowerInfer engine: build, run, quantize, and serve ReLU-sparse models |
+| [SmallThinker](./smallthinker/README.md) | On-device MoE models (21B / 4B) with native sparse inference |
+| [Examples](./examples/) | Serving, batched generation, perplexity evaluation, fine-tuning, and more |
+| [Docs](./docs/) | Performance tips, BLIS backend guide, and [fine-tuning addendum](./docs/fine-tuning.md) |
+| [Python helpers](./powerinfer-py/) | `powerinfer` Python package: GPU-index solver and weight export utilities |
+| [GGUF utilities](./gguf-py/) | Low-level Python library for reading and writing GGUF model files |
+| [TODO.md](./TODO.md) | Active modernization backlog |
 
 ## Latest News 🔥
 - [2026/1/5] We released **[Tiiny AI Pocket Lab](https://tiiny.ai/)**, the world's first pocket-size supercomputer. It runs GPT-OSS-120B (int4) locally at **20 tokens/s**. Featured at CES 2026.
-- [2025/7/27] We released [SmallThinker-21BA3B-Instruct](https://huggingface.co/PowerInfer/SmallThinker-21BA3B-Instruct) and [SmallThinker-4BA0.6B-Instruct](https://huggingface.co/PowerInfer/SmallThinker-4BA0.6B-Instruct). We also released a corresponding framework for efficient [on-device inference](./smallthinker/README.md). 
-- [2024/6/11] We are thrilled to introduce [PowerInfer-2](https://arxiv.org/abs/2406.06282), our highly optimized inference framework designed specifically for smartphones. With TurboSparse-Mixtral-47B, it achieves an impressive speed of 11.68 tokens per second, which is up to 22 times faster than other state-of-the-art frameworks.
-- [2024/6/11] We are thrilled to present [Turbo Sparse](https://arxiv.org/abs/2406.05955), our TurboSparse models for fast inference. With just $0.1M, we sparsified the original Mistral and Mixtral model to nearly 90% sparsity while maintaining superior performance! For a Mixtral-level model, our TurboSparse-Mixtral activates only **4B** parameters!
-- [2024/5/20] **Competition Recruitment: CCF-TCArch Customized Computing Challenge 2024**. The CCF TCARCH CCC is a national competition organized by the Technical Committee on Computer Architecture (TCARCH) of the China Computer Federation (CCF). This year's competition aims to optimize the PowerInfer inference engine using the open-source ROCm/HIP. More information about the competition can be found [here](https://ccf-tcarch-ccc.github.io/2024/).
-- [2024/5/17] We now provide support for AMD devices with ROCm.
-- [2024/3/28] We are trilled to present [Bamboo LLM](https://github.com/SJTU-IPADS/Bamboo) that achieves both top-level performance and unparalleled speed with PowerInfer! Experience it with Bamboo-7B [Base](https://huggingface.co/PowerInfer/Bamboo-base-v0.1-gguf) / [DPO](https://huggingface.co/PowerInfer/Bamboo-DPO-v0.1-gguf).
-- [2024/3/14] We supported ProSparse Llama 2 ([7B](https://huggingface.co/SparseLLM/prosparse-llama-2-7b)/[13B](https://huggingface.co/SparseLLM/prosparse-llama-2-13b)), ReLU models with ~90% sparsity, matching original Llama 2's performance (Thanks THUNLP & ModelBest)!
-- [2024/1/11] We supported Windows with GPU inference!
-- [2023/12/24] We released an online [gradio demo](https://powerinfer-gradio.vercel.app/) for Falcon(ReLU)-40B-FP16!
-- [2023/12/19] We officially released PowerInfer!
+- [2025/7/27] We released [SmallThinker-21BA3B-Instruct](https://huggingface.co/PowerInfer/SmallThinker-21BA3B-Instruct) and [SmallThinker-4BA0.6B-Instruct](https://huggingface.co/PowerInfer/SmallThinker-4BA0.6B-Instruct). We also released a corresponding framework for efficient [on-device inference](./smallthinker/README.md).
+- [2024/6/11] We introduced [PowerInfer-2](https://arxiv.org/abs/2406.06282), our highly optimized inference framework for smartphones. With TurboSparse-Mixtral-47B it achieves 11.68 tokens/s — up to 22× faster than other state-of-the-art frameworks.
+- [2024/6/11] We presented [TurboSparse](https://arxiv.org/abs/2406.05955): sparsified Mistral and Mixtral models to ~90% sparsity. TurboSparse-Mixtral activates only **4B** parameters while maintaining superior performance.
+- [2024/5/17] AMD ROCm support is now available.
+- [2024/3/28] [Bamboo LLM](https://github.com/SJTU-IPADS/Bamboo): top-level performance with PowerInfer speed. Download Bamboo-7B [Base](https://huggingface.co/PowerInfer/Bamboo-base-v0.1-gguf) / [DPO](https://huggingface.co/PowerInfer/Bamboo-DPO-v0.1-gguf).
+- [2024/3/14] ProSparse Llama 2 ([7B](https://huggingface.co/SparseLLM/prosparse-llama-2-7b) / [13B](https://huggingface.co/SparseLLM/prosparse-llama-2-13b)) supported — ~90% sparsity, matching Llama 2 quality.
+- [2024/1/11] Windows GPU inference supported.
+- [2023/12/19] PowerInfer officially released.
 
 ## Demo 🔥
 
@@ -29,13 +37,6 @@ https://github.com/SJTU-IPADS/PowerInfer/assets/34213478/fe441a42-5fce-448b-a3e5
 PowerInfer v.s. llama.cpp on a single RTX 4090(24G) running Falcon(ReLU)-40B-FP16 with a 11x speedup!
 
 <sub>Both PowerInfer and llama.cpp were running on the same hardware and fully utilized VRAM on RTX 4090.</sub>
-
-> [!NOTE]
-> **Live Demo Online⚡️**
->
-> Try out our [Gradio server](https://powerinfer-gradio.vercel.app/) hosting Falcon(ReLU)-40B-FP16 on a RTX 4090!
->
-> <sub>Experimental and without warranties 🚧</sub>
 
 ## Abstract
 
@@ -71,28 +72,28 @@ PowerInfer is flexible and easy to use with:
 
 You can use these models with PowerInfer today:
 
-- Falcon-40B
-- Llama2 family
-- ProSparse Llama2 family
+- **SmallThinker-21B / 4B** (MoE, on-device native sparse inference — see [SmallThinker guide](./smallthinker/README.md))
+- Falcon(ReLU)-40B
+- LLaMA-2 family (7B, 13B, 70B)
+- ProSparse LLaMA-2 family (7B, 13B)
 - Bamboo-7B
 
 We have tested PowerInfer on the following platforms:
 
 - x86-64 CPUs with AVX2 instructions, with or without NVIDIA GPUs, under **Linux**.
 - x86-64 CPUs with AVX2 instructions, with or without NVIDIA GPUs, under **Windows**.
-- Apple M Chips (CPU only) on **macOS**. (As we do not optimize for Mac, the performance improvement is not significant now.)
+- Apple M Chips (CPU only) on **macOS**.
 
-And new features coming soon:
-
-- Metal backend for sparse inference on macOS
-
-Please kindly refer to our [Project Kanban](https://github.com/orgs/SJTU-IPADS/projects/2/views/2) for our current focus of development.
+Please refer to [TODO.md](./TODO.md) for the current focus of development.
 
 ## Getting Started
 
 - [Installation](#setup-and-installation)
 - [Model Weights](#model-weights)
 - [Inference](#inference)
+- [SmallThinker on-device models](./smallthinker/README.md)
+- [Fine-tuning guide](./docs/fine-tuning.md)
+- [Python helpers (`powerinfer-py`)](./powerinfer-py/)
 
 ## Setup and Installation
 
@@ -106,8 +107,9 @@ PowerInfer requires the following dependencies:
 ### Get the Code
 
 ```bash
-git clone https://github.com/Tiiny-AI/PowerInfer
+git clone https://github.com/371-Minds/PowerInfer.git
 cd PowerInfer
+git submodule update --init --recursive
 pip install -r requirements.txt # install Python helpers' dependencies
 ```
 ### Build
@@ -257,6 +259,9 @@ Then you can use the quantized model for inference with PowerInfer with the same
 
 ## More Documentation
 - [Performance troubleshooting](./docs/token_generation_performance_tips.md)
+- [Fine-tuning supported models](./docs/fine-tuning.md)
+- [BLIS backend](./docs/BLIS.md)
+- [SmallThinker on-device inference](./smallthinker/README.md)
 
 ## Evaluation
 
