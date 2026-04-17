@@ -88,7 +88,7 @@ PowerInfer requires:
 ## Get the code
 
 ```bash
-git clone https://github.com/371-Minds/PowerInfer
+git clone <your PowerInfer repository URL>
 cd PowerInfer
 pip install -r requirements.txt
 ```
