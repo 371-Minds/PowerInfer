@@ -286,9 +286,11 @@ Please refer to our [paper](https://ipads.se.sjtu.edu.cn/_media/publications/pow
    - Issues are welcomed! Please feel free to open an issue and attach your running environment and running parameters. We will try our best to help you.
 
 ## TODOs
-We will release the code and data in the following order, please stay tuned!
+The active modernization tracker now lives in [TODO.md](./TODO.md).
 
-- [x] Release core code of PowerInfer, supporting Llama-2, Falcon-40B.
+The list below is the legacy release checklist kept for historical context:
+
+- [x] Release core code of PowerInfer, supporting Llama-2, Falcon-40B
 - [x] Support ~~Mistral-7B~~ (Bamboo-7B)
 - [x] Support Windows
 - [ ] Support text-generation-webui
