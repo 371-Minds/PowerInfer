@@ -1,311 +1,298 @@
-# PowerInfer: Fast Large Language Model Serving with a Consumer-grade GPU
+# PowerInfer: sparse LLM inference for practical local deployment
 
-## TL;DR
-PowerInfer is a CPU/GPU LLM inference engine leveraging **activation locality** for your device.
-
-<a href="https://trendshift.io/repositories/6186" target="_blank"><img src="https://trendshift.io/api/badge/repositories/6186" alt="SJTU-IPADS%2FPowerInfer | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+PowerInfer is an inference engine for running large language models on local hardware by exploiting **activation locality**. Instead of treating every neuron as equally active, PowerInfer separates consistently hot paths from input-dependent cold paths so sparse models can use GPU memory, CPU compute, and VRAM budgets more efficiently.
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-[Project Kanban](https://github.com/orgs/SJTU-IPADS/projects/2/views/2)
+## What this repository is for
 
-## Latest News 🔥
-- [2026/1/5] We released **[Tiiny AI Pocket Lab](https://tiiny.ai/)**, the world's first pocket-size supercomputer. It runs GPT-OSS-120B (int4) locally at **20 tokens/s**. Featured at CES 2026.
-- [2025/7/27] We released [SmallThinker-21BA3B-Instruct](https://huggingface.co/PowerInfer/SmallThinker-21BA3B-Instruct) and [SmallThinker-4BA0.6B-Instruct](https://huggingface.co/PowerInfer/SmallThinker-4BA0.6B-Instruct). We also released a corresponding framework for efficient [on-device inference](./smallthinker/README.md). 
-- [2024/6/11] We are thrilled to introduce [PowerInfer-2](https://arxiv.org/abs/2406.06282), our highly optimized inference framework designed specifically for smartphones. With TurboSparse-Mixtral-47B, it achieves an impressive speed of 11.68 tokens per second, which is up to 22 times faster than other state-of-the-art frameworks.
-- [2024/6/11] We are thrilled to present [Turbo Sparse](https://arxiv.org/abs/2406.05955), our TurboSparse models for fast inference. With just $0.1M, we sparsified the original Mistral and Mixtral model to nearly 90% sparsity while maintaining superior performance! For a Mixtral-level model, our TurboSparse-Mixtral activates only **4B** parameters!
-- [2024/5/20] **Competition Recruitment: CCF-TCArch Customized Computing Challenge 2024**. The CCF TCARCH CCC is a national competition organized by the Technical Committee on Computer Architecture (TCARCH) of the China Computer Federation (CCF). This year's competition aims to optimize the PowerInfer inference engine using the open-source ROCm/HIP. More information about the competition can be found [here](https://ccf-tcarch-ccc.github.io/2024/).
-- [2024/5/17] We now provide support for AMD devices with ROCm.
-- [2024/3/28] We are trilled to present [Bamboo LLM](https://github.com/SJTU-IPADS/Bamboo) that achieves both top-level performance and unparalleled speed with PowerInfer! Experience it with Bamboo-7B [Base](https://huggingface.co/PowerInfer/Bamboo-base-v0.1-gguf) / [DPO](https://huggingface.co/PowerInfer/Bamboo-DPO-v0.1-gguf).
-- [2024/3/14] We supported ProSparse Llama 2 ([7B](https://huggingface.co/SparseLLM/prosparse-llama-2-7b)/[13B](https://huggingface.co/SparseLLM/prosparse-llama-2-13b)), ReLU models with ~90% sparsity, matching original Llama 2's performance (Thanks THUNLP & ModelBest)!
-- [2024/1/11] We supported Windows with GPU inference!
-- [2023/12/24] We released an online [gradio demo](https://powerinfer-gradio.vercel.app/) for Falcon(ReLU)-40B-FP16!
-- [2023/12/19] We officially released PowerInfer!
+This repository now covers two closely related deployment tracks:
 
-## Demo 🔥
+- **PowerInfer classic**: hybrid CPU/GPU inference for ReLU-sparse and PowerInfer GGUF models on desktops and workstations.
+- **SmallThinker**: the newer on-device sparse MoE direction for phones, edge devices, and constrained local deployments, documented under [`smallthinker/`](./smallthinker/README.md).
+
+If you need the shortest positioning summary:
+
+- **Activation locality** is the core idea behind PowerInfer.
+- **Sparse inference** is how that idea turns into practical speed and memory wins.
+- **SmallThinker** is the current flagship model family for on-device deployment in this repo.
+- **Practical deployment** means buildable local tooling, reproducible conversion flows, and examples for CLI, serving, evaluation, and adapters.
+
+## Why PowerInfer still matters
+
+PowerInfer was built around a simple observation: during inference, only a subset of the model is consistently important for each token. By keeping the hot paths close to the GPU and handling colder paths more selectively, PowerInfer reduces memory pressure and unnecessary movement while preserving a familiar local-LLM workflow.
+
+That makes the project useful when you want to:
+
+- run sparse models on a single consumer GPU,
+- control GPU usage with a predictable `--vram-budget`,
+- keep a local-first stack for CLI, batch, and server workflows,
+- explore sparse model deployment rather than dense-only inference,
+- move toward newer on-device sparse deployments through SmallThinker.
+
+## Project map
+
+| Area | Use it for |
+| --- | --- |
+| [Root PowerInfer runtime](./README.md) | Classic PowerInfer build, model conversion, quantization, sparse inference, and hybrid CPU/GPU deployment |
+| [`smallthinker/`](./smallthinker/README.md) | Current SmallThinker models and the on-device sparse MoE runtime |
+| [`examples/`](./examples) | CLI, server, batched generation, perplexity, quantization, and fine-tuning examples |
+| [`docs/`](./docs) | Root-project troubleshooting and backend notes |
+| [`smallthinker/docs/`](./smallthinker/docs) | Install, build, function calling, multimodal, and backend-specific SmallThinker docs |
+| [`gguf-py/`](./gguf-py/README.md) | GGUF file tooling and Python packaging |
+| [`powerinfer-py/`](./powerinfer-py) | Python helpers for PowerInfer runtime workflows |
+| [`grammars/`](./grammars/README.md) | Grammar-constrained generation assets |
+
+## Current highlights
+
+- **SmallThinker**: [SmallThinker-21BA3B-Instruct](https://huggingface.co/PowerInfer/SmallThinker-21BA3B-Instruct) and [SmallThinker-4BA0.6B-Instruct](https://huggingface.co/PowerInfer/SmallThinker-4BA0.6B-Instruct) are the clearest view of the repo's current sparse, on-device direction.
+- **PowerInfer-2**: [paper](https://arxiv.org/abs/2406.06282) on smartphone-oriented sparse inference.
+- **Turbo Sparse**: [paper](https://arxiv.org/abs/2406.05955) on training highly sparse models for efficient deployment.
+- **Original PowerInfer paper**: [arXiv:2312.12456](https://arxiv.org/abs/2312.12456).
+
+## Demo
 
 https://github.com/SJTU-IPADS/PowerInfer/assets/34213478/fe441a42-5fce-448b-a3e5-ea4abb43ba23
 
-PowerInfer v.s. llama.cpp on a single RTX 4090(24G) running Falcon(ReLU)-40B-FP16 with a 11x speedup!
+PowerInfer versus llama.cpp on a single RTX 4090 running Falcon(ReLU)-40B-FP16 showed up to an 11x speedup in the original release evaluation.
 
-<sub>Both PowerInfer and llama.cpp were running on the same hardware and fully utilized VRAM on RTX 4090.</sub>
+## Deployment paths
 
-> [!NOTE]
-> **Live Demo Online⚡️**
->
-> Try out our [Gradio server](https://powerinfer-gradio.vercel.app/) hosting Falcon(ReLU)-40B-FP16 on a RTX 4090!
->
-> <sub>Experimental and without warranties 🚧</sub>
+### 1. Desktop sparse inference with PowerInfer
+Use the root project when you want classic PowerInfer GGUF flows, hybrid CPU/GPU execution, quantization, and the familiar `main` / `server` / `batched` style tooling.
 
-## Abstract
+### 2. Dense compatibility workflows
+PowerInfer can still run compatible dense GGUF variants for some workflows, but the main value of this repository is sparse inference and sparse-model deployment.
 
-We introduce PowerInfer, a high-speed Large Language Model (LLM) inference engine on a personal computer (PC)
-equipped with a single consumer-grade GPU. The key underlying the design of PowerInfer is exploiting the high **locality**
-inherent in LLM inference, characterized by a power-law distribution in neuron activation.
+### 3. On-device sparse MoE with SmallThinker
+Use [`smallthinker/`](./smallthinker/README.md) when you want the repo's newer path for phones, edge devices, or strict memory budgets.
 
-This distribution indicates that a small subset of neurons, termed hot neurons, are consistently activated
-across inputs, while the majority, cold neurons, vary based on specific inputs.
-PowerInfer exploits such an insight to design a GPU-CPU hybrid inference engine:
-hot-activated neurons are preloaded onto the GPU for fast access, while cold-activated neurons are computed
-on the CPU, thus significantly reducing GPU memory demands and CPU-GPU data transfers.
-PowerInfer further integrates adaptive predictors and neuron-aware sparse operators,
-optimizing the efficiency of neuron activation and computational sparsity.
+## Getting started
 
-Evaluation shows that PowerInfer attains an average token generation rate of 13.20 tokens/s, with a peak of 29.08 tokens/s, across various LLMs (including OPT-175B) on a single NVIDIA RTX 4090 GPU,
-only 18\% lower than that achieved by a top-tier server-grade A100 GPU.
-This significantly outperforms llama.cpp by up to 11.69x while retaining model accuracy.
+- [Build the root project](#build)
+- [Get model weights](#model-weights)
+- [Run inference](#inference)
+- [Serve or benchmark a model](#serving-evaluation-and-other-workflows)
+- [Fine-tune supported models](#fine-tuning-addendum)
+- [Explore SmallThinker](./smallthinker/README.md)
 
-## Features
-PowerInfer is a high-speed and easy-to-use inference engine for deploying LLMs locally.
+## Prerequisites
 
-PowerInfer is fast with:
+PowerInfer requires:
 
-- **Locality-centric design**: Utilizes sparse activation and 'hot'/'cold' neuron concept for efficient LLM inference, ensuring high speed with lower resource demands.
-- **Hybrid CPU/GPU Utilization**: Seamlessly integrates memory/computation capabilities of CPU and GPU for a balanced workload and faster processing.
+- CMake 3.17+
+- Python 3.8+ and pip
+- a supported compiler toolchain for your platform
+- optional GPU backend dependencies for CUDA or ROCm builds
 
-PowerInfer is flexible and easy to use with:
-
-- **Easy Integration**: Compatible with popular [ReLU-sparse models](https://huggingface.co/SparseLLM).
-- **Local Deployment Ease**: Designed and deeply optimized for local deployment on consumer-grade hardware, enabling low-latency LLM inference and serving on a single GPU.
-- **Backward Compatibility**: While distinct from llama.cpp, you can make use of most of `examples/` the same way as llama.cpp such as server and batched generation. PowerInfer also supports inference with llama.cpp's model weights for compatibility purposes, but there will be no performance gain.
-
-You can use these models with PowerInfer today:
-
-- Falcon-40B
-- Llama2 family
-- ProSparse Llama2 family
-- Bamboo-7B
-
-We have tested PowerInfer on the following platforms:
-
-- x86-64 CPUs with AVX2 instructions, with or without NVIDIA GPUs, under **Linux**.
-- x86-64 CPUs with AVX2 instructions, with or without NVIDIA GPUs, under **Windows**.
-- Apple M Chips (CPU only) on **macOS**. (As we do not optimize for Mac, the performance improvement is not significant now.)
-
-And new features coming soon:
-
-- Metal backend for sparse inference on macOS
-
-Please kindly refer to our [Project Kanban](https://github.com/orgs/SJTU-IPADS/projects/2/views/2) for our current focus of development.
-
-## Getting Started
-
-- [Installation](#setup-and-installation)
-- [Model Weights](#model-weights)
-- [Inference](#inference)
-
-## Setup and Installation
-
-### Pre-requisites
-
-PowerInfer requires the following dependencies:
-
-- CMake (3.17+)
-- Python (3.8+) and pip (19.3+), for converting model weights and automatic FFN offloading
-
-### Get the Code
+## Get the code
 
 ```bash
-git clone https://github.com/Tiiny-AI/PowerInfer
+git clone https://github.com/371-Minds/PowerInfer
 cd PowerInfer
-pip install -r requirements.txt # install Python helpers' dependencies
+pip install -r requirements.txt
 ```
-### Build
 
-In order to build PowerInfer you have two different options. These commands are supposed to be run from the root directory of the project.
+## Build
 
-Using `CMake`(3.17+):
-* If you have an NVIDIA GPU:
+These commands are run from the repository root.
+
+### NVIDIA GPU
+
 ```bash
 cmake -S . -B build -DLLAMA_CUBLAS=ON
 cmake --build build --config Release
 ```
-* If you have an AMD GPU:
+
+### AMD GPU
+
 ```bash
-# Replace '1100' to your card architecture name, you can get it by rocminfo
+# Replace '1100' with your GPU architecture from rocminfo
 CC=/opt/rocm/llvm/bin/clang CXX=/opt/rocm/llvm/bin/clang++ cmake -S . -B build -DLLAMA_HIPBLAS=ON -DAMDGPU_TARGETS=gfx1100
 cmake --build build --config Release
 ```
 
-* If you have just CPU:
+### CPU only
 
 ```bash
 cmake -S . -B build
 cmake --build build --config Release
 ```
 
-## Model Weights
+## Model weights
 
-PowerInfer models are stored in a special format called *PowerInfer GGUF* based on GGUF format, consisting of both LLM weights and predictor weights.
+PowerInfer models are stored as **PowerInfer GGUF** files, which bundle the model weights with predictor data used for sparse routing and FFN offloading.
 
-### Download PowerInfer GGUF via Hugging Face
+### Download PowerInfer GGUF from Hugging Face
 
-You can obtain PowerInfer GGUF weights at `*.powerinfer.gguf` as well as profiled model activation statistics for 'hot'-neuron offloading from each Hugging Face repo below.
+| Base model | PowerInfer GGUF |
+| --- | --- |
+| LLaMA(ReLU)-2-7B | [PowerInfer/ReluLLaMA-7B-PowerInfer-GGUF](https://huggingface.co/PowerInfer/ReluLLaMA-7B-PowerInfer-GGUF) |
+| LLaMA(ReLU)-2-13B | [PowerInfer/ReluLLaMA-13B-PowerInfer-GGUF](https://huggingface.co/PowerInfer/ReluLLaMA-13B-PowerInfer-GGUF) |
+| Falcon(ReLU)-40B | [PowerInfer/ReluFalcon-40B-PowerInfer-GGUF](https://huggingface.co/PowerInfer/ReluFalcon-40B-PowerInfer-GGUF) |
+| LLaMA(ReLU)-2-70B | [PowerInfer/ReluLLaMA-70B-PowerInfer-GGUF](https://huggingface.co/PowerInfer/ReluLLaMA-70B-PowerInfer-GGUF) |
+| ProSparse-LLaMA-2-7B | [PowerInfer/ProSparse-LLaMA-2-7B-GGUF](https://huggingface.co/PowerInfer/prosparse-llama-2-7b-gguf) |
+| ProSparse-LLaMA-2-13B | [PowerInfer/ProSparse-LLaMA-2-13B-GGUF](https://huggingface.co/PowerInfer/prosparse-llama-2-13b-gguf) |
+| Bamboo-base-7B | [PowerInfer/Bamboo-base-v0.1-gguf](https://huggingface.co/PowerInfer/Bamboo-base-v0.1-gguf) |
+| Bamboo-DPO-7B | [PowerInfer/Bamboo-DPO-v0.1-gguf](https://huggingface.co/PowerInfer/Bamboo-DPO-v0.1-gguf) |
 
-| Base Model            | PowerInfer GGUF                                                                                               |
-| --------------------- | ------------------------------------------------------------------------------------------------------------- |
-| LLaMA(ReLU)-2-7B      | [PowerInfer/ReluLLaMA-7B-PowerInfer-GGUF](https://huggingface.co/PowerInfer/ReluLLaMA-7B-PowerInfer-GGUF)     |
-| LLaMA(ReLU)-2-13B     | [PowerInfer/ReluLLaMA-13B-PowerInfer-GGUF](https://huggingface.co/PowerInfer/ReluLLaMA-13B-PowerInfer-GGUF)   |
-| Falcon(ReLU)-40B      | [PowerInfer/ReluFalcon-40B-PowerInfer-GGUF](https://huggingface.co/PowerInfer/ReluFalcon-40B-PowerInfer-GGUF) |
-| LLaMA(ReLU)-2-70B     | [PowerInfer/ReluLLaMA-70B-PowerInfer-GGUF](https://huggingface.co/PowerInfer/ReluLLaMA-70B-PowerInfer-GGUF)   |
-| ProSparse-LLaMA-2-7B  | [PowerInfer/ProSparse-LLaMA-2-7B-GGUF](https://huggingface.co/PowerInfer/prosparse-llama-2-7b-gguf)           |
-| ProSparse-LLaMA-2-13B | [PowerInfer/ProSparse-LLaMA-2-13B-GGUF](https://huggingface.co/PowerInfer/prosparse-llama-2-13b-gguf)         |
-| Bamboo-base-7B 🌟      | [PowerInfer/Bamboo-base-v0.1-gguf](https://huggingface.co/PowerInfer/Bamboo-base-v0.1-gguf)                   |
-| Bamboo-DPO-7B 🌟       | [PowerInfer/Bamboo-DPO-v0.1-gguf](https://huggingface.co/PowerInfer/Bamboo-DPO-v0.1-gguf)                     |
+We recommend `huggingface-cli` for full-repo downloads:
 
-We recommend using [`huggingface-cli`](https://huggingface.co/docs/huggingface_hub/guides/cli) to download the whole model repo. For example, the following command will download [PowerInfer/ReluLLaMA-7B-PowerInfer-GGUF](https://huggingface.co/PowerInfer/ReluLLaMA-7B-PowerInfer-GGUF) into the `./ReluLLaMA-7B` directory.
-
-```shell
+```bash
 huggingface-cli download --resume-download --local-dir ReluLLaMA-7B --local-dir-use-symlinks False PowerInfer/ReluLLaMA-7B-PowerInfer-GGUF
 ```
 
-As such, PowerInfer can automatically make use of the following directory structure for feature-complete model offloading:
-```
+Expected layout:
+
+```text
 .
-├── *.powerinfer.gguf (Unquantized PowerInfer model)
-├── *.q4.powerinfer.gguf (INT4 quantized PowerInfer model, if available)
-├── activation (Profiled activation statistics for fine-grained FFN offloading)
-│   ├── activation_x.pt (Profiled activation statistics for layer x)
+├── *.powerinfer.gguf
+├── *.q4.powerinfer.gguf
+├── activation
+│   ├── activation_x.pt
 │   └── ...
-├── *.[q4].powerinfer.gguf.generated.gpuidx (Generated GPU index at runtime for corresponding model)
+└── *.[q4].powerinfer.gguf.generated.gpuidx
 ```
 
-### Convert from Original Model Weights + Predictor Weights
+### Convert original weights plus predictor weights
 
-Hugging Face limits single model weight to 50GiB. For unquantized models >= 40B, you can convert PowerInfer GGUF from the original model weights and predictor weights obtained from Hugging Face.
+For large unquantized models, you can convert original weights plus predictor weights into PowerInfer GGUF.
 
-| Base Model            | Original Model                                                                            | Predictor                                                                                                       |
-| --------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| LLaMA(ReLU)-2-7B      | [SparseLLM/ReluLLaMA-7B](https://huggingface.co/SparseLLM/ReluLLaMA-7B)                   | [PowerInfer/ReluLLaMA-7B-Predictor](https://huggingface.co/PowerInfer/ReluLLaMA-7B-Predictor)                   |
-| LLaMA(ReLU)-2-13B     | [SparseLLM/ReluLLaMA-13B](https://huggingface.co/SparseLLM/ReluLLaMA-13B)                 | [PowerInfer/ReluLLaMA-13B-Predictor](https://huggingface.co/PowerInfer/ReluLLaMA-13B-Predictor)                 |
-| Falcon(ReLU)-40B      | [SparseLLM/ReluFalcon-40B](https://huggingface.co/SparseLLM/ReluFalcon-40B)               | [PowerInfer/ReluFalcon-40B-Predictor](https://huggingface.co/PowerInfer/ReluFalcon-40B-Predictor)               |
-| LLaMA(ReLU)-2-70B     | [SparseLLM/ReluLLaMA-70B](https://huggingface.co/SparseLLM/ReluLLaMA-70B)                 | [PowerInfer/ReluLLaMA-70B-Predictor](https://huggingface.co/PowerInfer/ReluLLaMA-70B-Predictor)                 |
-| ProSparse-LLaMA-2-7B  | [SparseLLM/ProSparse-LLaMA-2-7B](https://huggingface.co/SparseLLM/prosparse-llama-2-7b)   | [PowerInfer/ProSparse-LLaMA-2-7B-Predictor](https://huggingface.co/PowerInfer/prosparse-llama-2-7b-predictor)   |
+| Base model | Original model | Predictor |
+| --- | --- | --- |
+| LLaMA(ReLU)-2-7B | [SparseLLM/ReluLLaMA-7B](https://huggingface.co/SparseLLM/ReluLLaMA-7B) | [PowerInfer/ReluLLaMA-7B-Predictor](https://huggingface.co/PowerInfer/ReluLLaMA-7B-Predictor) |
+| LLaMA(ReLU)-2-13B | [SparseLLM/ReluLLaMA-13B](https://huggingface.co/SparseLLM/ReluLLaMA-13B) | [PowerInfer/ReluLLaMA-13B-Predictor](https://huggingface.co/PowerInfer/ReluLLaMA-13B-Predictor) |
+| Falcon(ReLU)-40B | [SparseLLM/ReluFalcon-40B](https://huggingface.co/SparseLLM/ReluFalcon-40B) | [PowerInfer/ReluFalcon-40B-Predictor](https://huggingface.co/PowerInfer/ReluFalcon-40B-Predictor) |
+| LLaMA(ReLU)-2-70B | [SparseLLM/ReluLLaMA-70B](https://huggingface.co/SparseLLM/ReluLLaMA-70B) | [PowerInfer/ReluLLaMA-70B-Predictor](https://huggingface.co/PowerInfer/ReluLLaMA-70B-Predictor) |
+| ProSparse-LLaMA-2-7B | [SparseLLM/ProSparse-LLaMA-2-7B](https://huggingface.co/SparseLLM/prosparse-llama-2-7b) | [PowerInfer/ProSparse-LLaMA-2-7B-Predictor](https://huggingface.co/PowerInfer/prosparse-llama-2-7b-predictor) |
 | ProSparse-LLaMA-2-13B | [SparseLLM/ProSparse-LLaMA-2-13B](https://huggingface.co/SparseLLM/prosparse-llama-2-13b) | [PowerInfer/ProSparse-LLaMA-2-13B-Predictor](https://huggingface.co/PowerInfer/prosparse-llama-2-13b-predictor) |
-| Bamboo-base-7B 🌟      | [PowerInfer/Bamboo-base-v0.1](https://huggingface.co/PowerInfer/Bamboo-base-v0_1)         | [PowerInfer/Bamboo-base-v0.1-predictor](https://huggingface.co/PowerInfer/Bamboo-base-v0.1-predictor)           |
-| Bamboo-DPO-7B 🌟       | [PowerInfer/Bamboo-DPO-v0.1](https://huggingface.co/PowerInfer/Bamboo-DPO-v0_1)           | [PowerInfer/Bamboo-DPO-v0.1-predictor](https://huggingface.co/PowerInfer/Bamboo-DPO-v0.1-predictor)             |
+| Bamboo-base-7B | [PowerInfer/Bamboo-base-v0.1](https://huggingface.co/PowerInfer/Bamboo-base-v0_1) | [PowerInfer/Bamboo-base-v0.1-predictor](https://huggingface.co/PowerInfer/Bamboo-base-v0.1-predictor) |
+| Bamboo-DPO-7B | [PowerInfer/Bamboo-DPO-v0.1](https://huggingface.co/PowerInfer/Bamboo-DPO-v0_1) | [PowerInfer/Bamboo-DPO-v0.1-predictor](https://huggingface.co/PowerInfer/Bamboo-DPO-v0.1-predictor) |
 
-You can use the following command to convert the original model weights and predictor weights to PowerInfer GGUF:
 ```bash
-# make sure that you have done `pip install -r requirements.txt`
 python convert.py --outfile /PATH/TO/POWERINFER/GGUF/REPO/MODELNAME.powerinfer.gguf /PATH/TO/ORIGINAL/MODEL /PATH/TO/PREDICTOR
-# python convert.py --outfile ./ReluLLaMA-70B-PowerInfer-GGUF/llama-70b-relu.powerinfer.gguf ./SparseLLM/ReluLLaMA-70B ./PowerInfer/ReluLLaMA-70B-Predictor
 ```
-For the same reason, we suggest keeping the same directory structure as PowerInfer GGUF repos after conversion.
 
-<details>
-
-<summary>Convert Original models into dense GGUF models(compatible with llama.cpp)</summary>
+If you need a dense GGUF variant for compatibility-oriented workflows:
 
 ```bash
 python convert-dense.py --outfile /PATH/TO/DENSE/GGUF/REPO/MODELNAME.gguf /PATH/TO/ORIGINAL/MODEL
-# python convert-dense.py --outfile ./Bamboo-DPO-v0.1-gguf/bamboo-7b-dpo-v0.1.gguf --outtype f16 ./Bamboo-DPO-v0.1
 ```
 
-Please note that the generated dense GGUF models might not work properly with llama.cpp, as we have altered activation functions (for ReluLLaMA and Prosparse models), or the model architecture (for Bamboo models). The dense GGUF models generated by convert-dense.py can be used for PowerInfer in dense inference mode, but might not work properly with llama.cpp.
-
-</details>
+Dense exports can be useful for compatibility and fine-tuning workflows, but they do not provide the sparse inference benefits that define PowerInfer.
 
 ## Inference
 
-For CPU-only and CPU-GPU hybrid inference with all available VRAM, you can use the following instructions to run PowerInfer:
-```bash
-./build/bin/main -m /PATH/TO/MODEL -n $output_token_count -t $thread_num -p $prompt
-# e.g.: ./build/bin/main -m ./ReluFalcon-40B-PowerInfer-GGUF/falcon-40b-relu.q4.powerinfer.gguf -n 128 -t 8 -p "Once upon a time"
-# For Windows: .\build\bin\Release\main.exe -m .\ReluFalcon-40B-PowerInfer-GGUF\falcon-40b-relu.q4.powerinfer.gguf -n 128 -t 8 -p "Once upon a time"
-```
-
-If you want to limit the VRAM usage of GPU:
-```bash
-./build/bin/main -m /PATH/TO/MODEL -n $output_token_count -t $thread_num -p $prompt --vram-budget $vram_gb
-# e.g.: ./build/bin/main -m ./ReluLLaMA-7B-PowerInfer-GGUF/llama-7b-relu.powerinfer.gguf -n 128 -t 8 -p "Once upon a time" --vram-budget 8
-# For Windows: .\build\bin\Release\main.exe -m .\ReluLLaMA-7B-PowerInfer-GGUF\llama-7b-relu.powerinfer.gguf -n 128 -t 8 -p "Once upon a time" --vram-budget 8
-```
-Under CPU-GPU hybrid inference, PowerInfer will automatically offload all dense activation blocks to GPU, then split FFN and offload to GPU if possible.
-
-<details>
-<summary>Dense inference mode (limited support)</summary>
-
-If you want to run PowerInfer to infer with the dense variants of the PowerInfer model family, you can use similarly as llama.cpp does:
+### Default sparse inference
 
 ```bash
-./build/bin/main -m /PATH/TO/DENSE/MODEL -n $output_token_count -t $thread_num -p $prompt -ngl $num_gpu_layers
-# e.g.: ./build/bin/main -m ./Bamboo-base-v0.1-gguf/bamboo-7b-v0.1.gguf -n 128 -t 8 -p "Once upon a time" -ngl 12
+./build/bin/main -m /PATH/TO/MODEL -n 128 -t 8 -p "Once upon a time"
 ```
 
-So is the case for other `examples/` like `server` and `batched_generation`. Please note that the dense inference mode is not a "compatible mode" for all models. We have altered activation functions (for ReluLLaMA and Prosparse models) in this mode to match with our model family. 
+Windows:
 
-</details>
+```powershell
+.\build\bin\Release\main.exe -m .\MODEL.powerinfer.gguf -n 128 -t 8 -p "Once upon a time"
+```
 
-## Serving, Perplexity Evaluation, and more applications
+### Limit GPU memory with `--vram-budget`
 
-PowerInfer supports serving and batched generation with the same instructions as llama.cpp. Generally, you can use the same command as llama.cpp, except for `-ngl` argument which has been replaced by `--vram-budget` for PowerInfer. Please refer to the detailed instructions in each `examples/` directory. For example:
+```bash
+./build/bin/main -m /PATH/TO/MODEL -n 128 -t 8 -p "Once upon a time" --vram-budget 8
+```
+
+Under CPU/GPU hybrid inference, PowerInfer offloads dense blocks first and then uses remaining VRAM for sparse FFN placement.
+
+### Dense inference mode
+
+For dense GGUF variants, you can use the familiar layer-offload style:
+
+```bash
+./build/bin/main -m /PATH/TO/DENSE/MODEL -n 128 -t 8 -p "Once upon a time" -ngl 12
+```
+
+This is a compatibility path, not the primary sparse PowerInfer workflow.
+
+## Serving, evaluation, and other workflows
+
+PowerInfer keeps the same practical local-deployment shape as llama.cpp-style tooling, with PowerInfer-specific sparse behavior where needed.
 
 - [Serving](./examples/server/README.md)
-- [Perplexity Evaluation](./examples/perplexity/README.md)
-- [Batched Generation](./examples/batched/README.md)
+- [Perplexity evaluation](./examples/perplexity/README.md)
+- [Batched generation](./examples/batched/README.md)
+- [Main CLI usage](./examples/main/README.md)
+- [Quantization example](./examples/quantize/README.md)
+- [Performance troubleshooting](./docs/token_generation_performance_tips.md)
+
+For constrained outputs and agent-style integrations, also look at:
+
+- [Grammar assets](./grammars/README.md)
+- [SmallThinker function calling docs](./smallthinker/docs/function-calling.md)
+- [SmallThinker install docs](./smallthinker/docs/install.md)
+- [SmallThinker multimodal docs](./smallthinker/docs/multimodal.md)
 
 ## Quantization
 
-PowerInfer has optimized quantization support for INT4(`Q4_0`) models. You can use the following instructions to quantize PowerInfer GGUF model:
+PowerInfer includes optimized support for INT4 (`Q4_0`) quantization:
+
 ```bash
 ./build/bin/quantize /PATH/TO/MODEL /PATH/TO/OUTPUT/QUANTIZED/MODEL Q4_0
-# e.g.: ./build/bin/quantize ./ReluFalcon-40B-PowerInfer-GGUF/falcon-40b-relu.powerinfer.gguf ./ReluFalcon-40B-PowerInfer-GGUF/falcon-40b-relu.q4.powerinfer.gguf Q4_0
-# For Windows: .\build\bin\Release\quantize.exe .\ReluFalcon-40B-PowerInfer-GGUF\falcon-40b-relu.powerinfer.gguf .\ReluFalcon-40B-PowerInfer-GGUF\falcon-40b-relu.q4.powerinfer.gguf Q4_0
 ```
-Then you can use the quantized model for inference with PowerInfer with the same instructions as above.
 
-## More Documentation
-- [Performance troubleshooting](./docs/token_generation_performance_tips.md)
+After quantization, run the quantized model with the same inference commands above.
+
+## Fine-tuning addendum
+
+The repository already includes a local adapter fine-tuning path under [`examples/finetune/`](./examples/finetune/README.md).
+
+Use this addendum as the practical guide:
+
+1. **Start from a supported dense base model or dense GGUF workflow.** The built-in fine-tuning flow is adapter-oriented and is documented around GGUF base models and LoRA outputs.
+2. **Run `finetune` to train an adapter locally.** See [`examples/finetune/README.md`](./examples/finetune/README.md) for checkpointing, LoRA rank controls, and resume behavior.
+3. **Load the adapter during inference.** The generated LoRA adapters can be applied with `main` using `--lora` or `--lora-scaled`.
+4. **Optionally export a merged model.** Use [`examples/export-lora/README.md`](./examples/export-lora/README.md) if you want to bake adapters into a derived GGUF.
+
+Important caveats:
+
+- The sparse PowerInfer path is primarily an **inference** runtime.
+- If your target deployment is a PowerInfer sparse model, the fine-tuning flow is usually: fine-tune the supported dense/base model or adapter path first, then convert or package for the deployment format you need.
+- For newer on-device sparse MoE work, check [`smallthinker/`](./smallthinker/README.md) first, since that is where the repo's current model direction is documented most actively.
 
 ## Evaluation
 
-We evaluated PowerInfer vs. llama.cpp on a single RTX 4090(24G) with a series of FP16 ReLU models under inputs of length 64, and the results are shown below. PowerInfer achieves up to 11x speedup on Falcon 40B and up to 3x speedup on Llama 2 70B.
+PowerInfer's original release reported up to 11x speedup on Falcon 40B and up to 3x speedup on Llama 2 70B versus llama.cpp on a single RTX 4090.
 
 ![github-eval-4090](https://github.com/SJTU-IPADS/PowerInfer/assets/34213478/d700fa6c-77ba-462f-a2fc-3fd21c898f33)
-<sub>The X axis indicates the output length, and the Y axis represents the speedup compared with llama.cpp. The number above each bar indicates the end-to-end generation speed (total prompting + generation time / total tokens generated, in tokens/s).</sub>
 
-We also evaluated PowerInfer on a single RTX 2080Ti(11G) with INT4 ReLU models under inputs of length 8, and the results are illustrated in the same way as above. PowerInfer achieves up to 8x speedup on Falcon 40B and up to 3x speedup on Llama 2 70B.
+INT4 results on a single RTX 2080 Ti:
 
 ![github-eval-2080ti-q4](https://github.com/SJTU-IPADS/PowerInfer/assets/34213478/0fc1bfc4-aafc-4e82-a865-bec0143aff1a)
 
-Please refer to our [paper](https://ipads.se.sjtu.edu.cn/_media/publications/powerinfer-20231219.pdf) for more evaluation details.
+For more technical detail, see the [PowerInfer paper](https://arxiv.org/abs/2312.12456).
 
-## FAQs
-1. What if I encountered `CUDA_ERROR_OUT_OF_MEMORY`?
-   - You can try to run with `--reset-gpu-index` argument to rebuild the GPU index for this model to avoid any stale cache.
-   - Due to our current implementation, model offloading might not be as accurate as expected. You can try with `--vram-budget` with a slightly lower value or `--disable-gpu-index` to disable FFN offloading.
+## FAQ
 
-2. Does PowerInfer support mistral, original llama, Qwen, ...?
-   - Now we only support models with ReLU/ReGLU/Squared ReLU activation function. So we do not support these models now. It's worth mentioning that a [paper](https://arxiv.org/pdf/2310.04564.pdf) has demonstrated that using the ReLU/ReGLU activation function has a negligible impact on convergence and performance.
+1. **What if I hit `CUDA_ERROR_OUT_OF_MEMORY`?**
+   - Rebuild the GPU index with `--reset-gpu-index`.
+   - Try a slightly lower `--vram-budget`.
+   - Use `--disable-gpu-index` if you need to disable FFN offloading for diagnosis.
 
-3. Why is there a noticeable downgrade in the performance metrics of our current ReLU model, particularly the 70B model?
-   - In contrast to the typical requirement of around 2T tokens for LLM training, our model's fine-tuning was conducted with only 5B tokens. This insufficient retraining has resulted in the model's inability to regain its original performance. We are actively working on updating to a more capable model, so please stay tuned.
+2. **Does PowerInfer support every dense model family?**
+   - No. The sparse runtime is focused on models with ReLU, ReGLU, or Squared ReLU style activations and related sparse packaging flows.
 
-4. What if...
-   - Issues are welcomed! Please feel free to open an issue and attach your running environment and running parameters. We will try our best to help you.
+3. **Where should I start if I care more about phones or edge deployment than desktop sparse inference?**
+   - Start with [`smallthinker/README.md`](./smallthinker/README.md).
+
+4. **Where is the active modernization backlog?**
+   - See [TODO.md](./TODO.md).
 
 ## TODOs
-The active modernization tracker now lives in [TODO.md](./TODO.md).
 
-The list below is the legacy release checklist kept for historical context:
+The active modernization tracker lives in [TODO.md](./TODO.md).
 
-- [x] Release core code of PowerInfer, supporting Llama-2, Falcon-40B
-- [x] Support ~~Mistral-7B~~ (Bamboo-7B)
-- [x] Support Windows
-- [ ] Support text-generation-webui
-- [x] Release perplexity evaluation code
-- [ ] Support Metal for Mac
-- [ ] Release code for OPT models
-- [ ] Release predictor training code
-- [x] Support online split for FFN network
-- [ ] Support Multi-GPU
+## Paper and citation
 
-
-## Paper and Citation
-More technical details can be found in our [paper](https://ipads.se.sjtu.edu.cn/_media/publications/powerinfer-20231219.pdf).
-
-If you find PowerInfer useful or relevant to your project and research, please kindly cite our paper:
+If you find PowerInfer useful, please cite:
 
 ```bibtex
 @misc{song2023powerinfer,
@@ -319,4 +306,5 @@ If you find PowerInfer useful or relevant to your project and research, please k
 ```
 
 ## Acknowledgement
-We are thankful for the easily modifiable operator library [ggml](https://github.com/ggerganov/ggml) and execution runtime provided by [llama.cpp](https://github.com/ggerganov/llama.cpp). We also extend our gratitude to [THUNLP](https://nlp.csai.tsinghua.edu.cn/) for their support of ReLU-based sparse models. We also appreciate the research of [Deja Vu](https://proceedings.mlr.press/v202/liu23am.html), which inspires PowerInfer.
+
+We are thankful for [ggml](https://github.com/ggerganov/ggml), [llama.cpp](https://github.com/ggerganov/llama.cpp), the ReLU-based sparse model work from [THUNLP](https://nlp.csai.tsinghua.edu.cn/), and the research direction opened by [Deja Vu](https://proceedings.mlr.press/v202/liu23am.html).
