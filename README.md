@@ -45,7 +45,7 @@ That makes the project useful when you want to:
 
 ## Current highlights
 
-- **SmallThinker**: [SmallThinker-21BA3B-Instruct](https://huggingface.co/PowerInfer/SmallThinker-21BA3B-Instruct) and [SmallThinker-4BA0.6B-Instruct](https://huggingface.co/PowerInfer/SmallThinker-4BA0.6B-Instruct) are the clearest view of the repo's current sparse, on-device direction.
+- **SmallThinker**: [SmallThinker 21B-A3B Instruct](https://huggingface.co/PowerInfer/SmallThinker-21BA3B-Instruct) and [SmallThinker 4B-A0.6B Instruct](https://huggingface.co/PowerInfer/SmallThinker-4BA0.6B-Instruct) are the clearest view of the repo's current sparse, on-device direction.
 - **PowerInfer-2**: [paper](https://arxiv.org/abs/2406.06282) on smartphone-oriented sparse inference.
 - **Turbo Sparse**: [paper](https://arxiv.org/abs/2406.05955) on training highly sparse models for efficient deployment.
 - **Original PowerInfer paper**: [arXiv:2312.12456](https://arxiv.org/abs/2312.12456).
