@@ -9,10 +9,10 @@ This file tracks the current modernization work for the repository.
 
 ## Documentation and positioning
 
-- [ ] Refresh the root README around the current PowerInfer story: activation locality, sparse inference, SmallThinker, and practical deployment
-- [ ] Replace stale links, outdated release notes, and legacy branding drift where they reduce trust
-- [ ] Add a clearer navigation path between the root project, `smallthinker`, examples, docs, and Python helpers
-- [ ] Create a fine-tuning addendum at the end to show how to fine-tune supported models
+- [x] Refresh the root README around the current PowerInfer story: activation locality, sparse inference, SmallThinker, and practical deployment
+- [x] Replace stale links, outdated release notes, and legacy branding drift where they reduce trust
+- [x] Add a clearer navigation path between the root project, `smallthinker`, examples, docs, and Python helpers
+- [x] Create a fine-tuning addendum at the end to show how to fine-tune supported models
 
 ## Hallucination reduction and cognitive load
 
