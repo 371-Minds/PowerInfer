@@ -16,10 +16,10 @@ This file tracks the current modernization work for the repository.
 
 ## Hallucination reduction and cognitive load
 
-- [ ] Define a practical "cognitive load" feature set for inference that reduces hallucinations without bloating latency
-- [ ] Promote structured outputs, constrained grammars, and schema-first generation as the default low-hallucination path
-- [ ] Add task-oriented guidance for when to use short answers, bounded reasoning, or strict JSON generation
-- [ ] Identify evaluation tasks for hallucination reduction, JSON validity, and factual consistency
+- [x] Define a practical "cognitive load" feature set for inference that reduces hallucinations without bloating latency
+- [x] Promote structured outputs, constrained grammars, and schema-first generation as the default low-hallucination path
+- [x] Add task-oriented guidance for when to use short answers, bounded reasoning, or strict JSON generation
+- [x] Identify evaluation tasks for hallucination reduction, JSON validity, and factual consistency
 
 ## Compression and quantization
 
