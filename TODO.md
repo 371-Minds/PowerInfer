@@ -23,9 +23,9 @@ This file tracks the current modernization work for the repository.
 
 ## Compression and quantization
 
-- [ ] Review whether TurboQuant-style compression fits the current PowerInfer architecture and sparse-routing assumptions
-- [ ] Identify the highest-value tensors and paths for future compression experiments
-- [ ] Separate "research exploration" items from production-ready compression work
+- [x] Review whether TurboQuant-style compression fits the current PowerInfer architecture and sparse-routing assumptions
+- [x] Identify the highest-value tensors and paths for future compression experiments
+- [x] Separate "research exploration" items from production-ready compression work
 
 ## Product and developer experience
 
