@@ -14,7 +14,7 @@ PowerInfer divides FFN computation across two regimes at load time:
 
 - **Hot path (GPU)**: A per-layer subset of neurons whose activation statistics exceed the sparse threshold are copied into striped matrices (`ffn_gate_gpu`, `ffn_up_gpu`, `ffn_down_gpu`) resident on the GPU. The stripe layout is derived from `gpu_idx` and `gpu_bucket`, which are built from pre-computed activation files.
 - **Cold path (CPU)**: The remaining neurons stay in main memory and are computed on the CPU for the tokens that the predictor says need them.
-- **Predictor (GPU)**: A lightweight two-layer ReLU MLP (`mlp_pre_w1`, `mlp_pre_w2`) runs on the GPU first to decide which neurons fall in the hot versus cold bucket for each forward pass.
+- **Predictor (GPU)**: A lightweight two-layer ReLU MLP (`mlp_pre_w1`, `mlp_pre_w2`) runs on the GPU each forward pass and produces a per-token sparse index (`idx`) of predicted-active neurons. At runtime, the engine routes each neuron through the GPU path if its index appears in both `idx` and the load-time `gpu_bucket`, and through the CPU path otherwise. The hot/cold bucket boundary itself is fixed at load time; the predictor only selects which subset of the hot bucket is exercised for a given token.
 
 This split is the critical backdrop for any compression discussion. A technique that makes sense for a uniform dense model may have very different cost/quality tradeoffs when one part of the same weight matrix lives on GPU and the other lives on CPU.
 
