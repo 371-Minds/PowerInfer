@@ -29,6 +29,6 @@ This file tracks the current modernization work for the repository.
 
 ## Product and developer experience
 
-- [ ] Review the server UX and API surface for modern local-app and agent workflows
-- [ ] Improve quickstart paths so a new user can build, run, and verify a model faster
-- [ ] Add benchmark and validation guidance that covers speed, memory, and output quality together
+- [x] Review the server UX and API surface for modern local-app and agent workflows
+- [x] Improve quickstart paths so a new user can build, run, and verify a model faster
+- [x] Add benchmark and validation guidance that covers speed, memory, and output quality together

@@ -69,10 +69,13 @@ Use [`smallthinker/`](./smallthinker/README.md) when you want the repo's newer p
 
 ## Getting started
 
+- [5-minute quickstart](#5-minute-quickstart)
 - [Build the root project](#build)
 - [Get model weights](#model-weights)
 - [Run inference](#inference)
 - [Serve or benchmark a model](#serving-evaluation-and-other-workflows)
+- [Server API and agent integration](#server-api-and-agent-integration)
+- [Benchmarks and validation](#benchmarks-and-validation)
 - [Fine-tune supported models](#fine-tuning-addendum)
 - [Explore SmallThinker](./smallthinker/README.md)
 
@@ -92,6 +95,67 @@ git clone <your PowerInfer repository URL>
 cd PowerInfer
 pip install -r requirements.txt
 ```
+
+## 5-minute quickstart
+
+This path gets you from a fresh clone to a verified running model with the smallest possible model on CPU-only hardware. GPU builds are faster but this path requires nothing beyond a C++ compiler and Python.
+
+**Step 1 – build (CPU-only)**
+
+```bash
+cmake -S . -B build
+cmake --build build --config Release -j$(nproc)
+```
+
+**Step 2 – download the smallest PowerInfer GGUF**
+
+```bash
+huggingface-cli download --resume-download \
+  --local-dir ReluLLaMA-7B \
+  --local-dir-use-symlinks False \
+  PowerInfer/ReluLLaMA-7B-PowerInfer-GGUF
+```
+
+**Step 3 – run your first inference**
+
+```bash
+./build/bin/main \
+  -m ReluLLaMA-7B/*.powerinfer.gguf \
+  -n 64 \
+  -t "$(nproc)" \
+  -p "Once upon a time"
+```
+
+**Step 4 – verify output quality (perplexity spot check)**
+
+```bash
+./build/bin/perplexity \
+  -m ReluLLaMA-7B/*.powerinfer.gguf \
+  -f grammars/README.md \
+  --chunks 1
+```
+
+A successful run prints a perplexity value and timing. Any finite number means the model loaded and ran correctly.
+
+**Step 5 – start the server**
+
+```bash
+./build/bin/server \
+  -m ReluLLaMA-7B/*.powerinfer.gguf \
+  -c 2048 \
+  --port 8080
+```
+
+Then from a second shell:
+
+```bash
+curl -s http://localhost:8080/completion \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"Once upon a time","n_predict":32}' \
+  | python3 -m json.tool
+```
+
+If you see a `content` field in the JSON, the stack is working end-to-end.
 
 ## Build
 
@@ -231,6 +295,205 @@ For constrained outputs and agent-style integrations, also look at:
 - [SmallThinker function calling docs](./smallthinker/docs/function-calling.md)
 - [SmallThinker install docs](./smallthinker/docs/install.md)
 - [SmallThinker multimodal docs](./smallthinker/docs/multimodal.md)
+
+## Server API and agent integration
+
+The built-in server exposes a JSON HTTP API that works directly with local-app and agent workflows. Start it with:
+
+```bash
+./build/bin/server \
+  -m /PATH/TO/MODEL \
+  -c 4096 \
+  --port 8080 \
+  -np 4 \         # number of parallel request slots
+  -cb             # continuous batching for higher throughput
+```
+
+### Native completion endpoint
+
+The `/completion` endpoint accepts prompts and returns structured JSON. This is the lowest-latency path for local applications:
+
+```bash
+curl -s http://localhost:8080/completion \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Extract the city name from: \"She moved to Berlin last year.\"",
+    "n_predict": 16,
+    "temperature": 0.0,
+    "stop": ["\n"]
+  }' | python3 -m json.tool
+```
+
+For streaming token-by-token output, add `"stream": true` and consume the `data:` SSE lines:
+
+```bash
+curl -s http://localhost:8080/completion \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"Once upon a time","n_predict":128,"stream":true}'
+```
+
+### Structured output and grammar constraints
+
+The server accepts a `grammar` field in any `/completion` request. This is the highest-reliability path for agent-facing endpoints because the model cannot produce tokens that violate the grammar.
+
+JSON-only output:
+
+```bash
+curl -s http://localhost:8080/completion \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Return a JSON object with keys name and city for: John Smith from Paris.",
+    "n_predict": 64,
+    "temperature": 0.0,
+    "grammar": "root   ::= object\nvalue  ::= object | array | string | number | bool | null\nobject ::= \"{\" ws ( string \":\" ws value (\",\" ws string \":\" ws value)* )? \"}\" ws\narray  ::= \"[\" ws ( value (\",\" ws value)* )? \"]\" ws\nstring ::= \"\\\"\" ([^\\\\\"\\x7F\\x00-\\x1F] | \"\\\\\" [\"\\\\/bfnrt] | \"\\\\u\" [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F])* \"\\\"\" ws\nnumber ::= (\"-\"? ([0-9] | [1-9] [0-9]*)) (\".\" [0-9]+)? (([eE] [-+]? [0-9]+))? ws\nbool   ::= (\"true\" | \"false\") ws\nnull   ::= \"null\" ws\nws     ::= ([ \\t\\n] ws)?"
+  }' | python3 -m json.tool
+```
+
+Prebuilt grammar files for JSON, lists, arithmetic, and chess are available in [`grammars/`](./grammars/README.md). Pass them from disk with:
+
+```bash
+curl -s http://localhost:8080/completion \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"prompt\": \"List three capital cities:\",
+    \"n_predict\": 128,
+    \"grammar\": $(jq -Rs . < grammars/list.gbnf)
+  }"
+```
+
+### OpenAI-compatible API wrapper
+
+For integrations that expect the OpenAI SDK surface, run the thin wrapper alongside the server:
+
+```bash
+python examples/server/api_like_OAI.py
+```
+
+Then point any OpenAI-compatible client at `http://localhost:8081`:
+
+```python
+import openai
+openai.api_base = "http://localhost:8081/v1"
+openai.api_key = "sk-no-key-required"
+response = openai.ChatCompletion.create(
+    model="powerinfer",
+    messages=[{"role": "user", "content": "What is activation sparsity?"}],
+)
+print(response.choices[0].message.content)
+```
+
+### Agent workflow recommendations
+
+| Integration pattern | Recommended approach |
+| --- | --- |
+| Single-turn extraction, routing, scoring | `/completion` with `grammar`, `temperature: 0`, and a tight `stop` list |
+| Multi-turn chat applications | `/completion` with a system prompt loaded via `-spf system.json` and `cache_prompt: true` |
+| Streaming UI or typeahead | `/completion` with `stream: true` and incremental SSE handling |
+| OpenAI SDK or LangChain integration | `api_like_OAI.py` wrapper |
+| Parallel batch requests | Multiple slots with `-np N` and `slot_id` to pin requests |
+
+Key server flags for production-like local deployments:
+
+| Flag | Purpose |
+| --- | --- |
+| `-np N` | N parallel request slots for concurrent workloads |
+| `-cb` | Continuous batching; keeps GPU busy across concurrent slots |
+| `--vram-budget N` | Cap VRAM (GiB); useful on shared machines |
+| `-c N` | Context window size per slot |
+| `--timeout N` | Per-request read/write timeout in seconds |
+| `--host 0.0.0.0` | Listen on all interfaces for LAN access |
+
+## Benchmarks and validation
+
+Use this section as the practical checklist when comparing builds, measuring the impact of quantization, or verifying that a model is performing correctly.
+
+### Speed: tokens per second with llama-bench
+
+`llama-bench` measures prompt processing (pp) and text generation (tg) throughput:
+
+```bash
+# baseline: prompt processing and generation at default settings
+./build/bin/llama-bench \
+  -m /PATH/TO/MODEL \
+  -p 512 \
+  -n 128 \
+  -r 3
+
+# compare two quantization levels
+./build/bin/llama-bench \
+  -m model_fp16.powerinfer.gguf \
+  -m model_q4.powerinfer.gguf \
+  -p 512 \
+  -n 128 \
+  -r 3 \
+  -o md
+```
+
+Output is a markdown table with average t/s and standard deviation. Add `-o json` to capture results for scripted comparison.
+
+Key tuning knobs to vary:
+
+| Flag | What it tests |
+| --- | --- |
+| `-t N` | Thread count; sweep 1,2,4,8,… to find the CPU throughput cliff |
+| `--vram-budget N` | How speed degrades as VRAM budget shrinks |
+| `-b N` | Batch size; larger batches improve prompt-processing t/s |
+| `-r N` | Repetitions; use at least 3 for stable averages |
+
+### Memory: VRAM and RAM usage
+
+PowerInfer logs VRAM allocation on startup. Check these lines to confirm the hot/cold FFN split is working:
+
+```text
+llm_load_sparse_model_tensors: VRAM used: XXXX.XX MB
+llm_load_gpu_split: offloaded XXXX.XX MiB of FFN weights to GPU
+```
+
+If `VRAM used` is far below your hardware maximum and you did not set `--vram-budget`, see [docs/token_generation_performance_tips.md](./docs/token_generation_performance_tips.md) for FFN split diagnostics.
+
+To measure peak RSS on Linux:
+
+```bash
+/usr/bin/time -v ./build/bin/main \
+  -m /PATH/TO/MODEL \
+  -n 64 \
+  -p "Once upon a time" 2>&1 | grep "Maximum resident"
+```
+
+### Output quality: perplexity
+
+Perplexity is the standard proxy for output quality. Lower is better; a change of more than ~0.5% versus the baseline is usually meaningful.
+
+```bash
+# compute perplexity on a text file (wikitext-2 or any representative document)
+./build/bin/perplexity \
+  -m /PATH/TO/MODEL \
+  -f /PATH/TO/TEST_CORPUS.txt \
+  --chunks 10
+```
+
+Expected reference ranges from the Llama 2 70B scorechart:
+
+| Quantization | Perplexity | Delta vs fp16 |
+| --- | --- | --- |
+| fp16 | 3.4313 | — |
+| Q6_K | 3.4367 | +0.16 % |
+| Q4_K_M | 3.4725 | +1.20 % |
+| Q4_0 | 3.5550 | +3.61 % |
+| Q2_K | 3.7339 | +8.82 % |
+
+### Validation checklist
+
+Run through this checklist when evaluating a new build, model, or quantization level:
+
+1. **Build check** – `cmake --build build --config Release` completes without errors.
+2. **Load check** – `main` starts, logs the sparse model tensors block, and produces output.
+3. **FFN split check** – Confirm `llm_load_gpu_split` line appears if running with GPU.
+4. **Speed baseline** – `llama-bench` with default settings; record average tg t/s and pp t/s.
+5. **Memory baseline** – Note `VRAM used` from startup logs and peak RSS from `/usr/bin/time`.
+6. **Quality baseline** – `perplexity --chunks 10`; confirm value is within expected range for the quantization level.
+7. **Server smoke test** – Start server, POST to `/completion`, confirm valid JSON response with `content` field.
+8. **Grammar smoke test** – POST to `/completion` with a JSON grammar, confirm output parses as valid JSON.
 
 ## Hallucination reduction and cognitive load
 
