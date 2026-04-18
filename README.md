@@ -37,7 +37,7 @@ That makes the project useful when you want to:
 | [Root PowerInfer runtime](./README.md) | Classic PowerInfer build, model conversion, quantization, sparse inference, and hybrid CPU/GPU deployment |
 | [`smallthinker/`](./smallthinker/README.md) | Current SmallThinker models and the on-device sparse MoE runtime |
 | [`examples/`](./examples) | CLI, server, batched generation, perplexity, quantization, and fine-tuning examples |
-| [`docs/`](./docs) | Root-project troubleshooting and backend notes |
+| [`docs/`](./docs) | Root-project troubleshooting, backend notes, and compression/quantization guidance |
 | [`smallthinker/docs/`](./smallthinker/docs) | Install, build, function calling, multimodal, and backend-specific SmallThinker docs |
 | [`gguf-py/`](./gguf-py/README.md) | GGUF file tooling and Python packaging |
 | [`powerinfer-py/`](./powerinfer-py) | Python helpers for PowerInfer runtime workflows |
@@ -222,6 +222,7 @@ PowerInfer keeps the same practical local-deployment shape as llama.cpp-style to
 - [Batched generation](./examples/batched/README.md)
 - [Main CLI usage](./examples/main/README.md)
 - [Quantization example](./examples/quantize/README.md)
+- [Compression and quantization guidance](./docs/compression-and-quantization.md)
 - [Performance troubleshooting](./docs/token_generation_performance_tips.md)
 
 For constrained outputs and agent-style integrations, also look at:
@@ -274,6 +275,8 @@ PowerInfer includes optimized support for INT4 (`Q4_0`) quantization:
 ```
 
 After quantization, run the quantized model with the same inference commands above.
+
+For a full discussion of which quantization formats work best with PowerInfer's hot/cold split, which tensors benefit most from compression, and which compression approaches are production-ready versus research-only, see [docs/compression-and-quantization.md](./docs/compression-and-quantization.md).
 
 ## Fine-tuning addendum
 
