@@ -88,6 +88,27 @@ PowerInfer requires:
 - a supported compiler toolchain for your platform
 - optional GPU backend dependencies for CUDA or ROCm builds
 
+### Compiler toolchain for your platform
+
+PowerInfer builds with standard C11 / C++11-capable toolchains. In practice, use one of the common CMake-supported setups below:
+
+- **Linux**: GCC or Clang with the usual native build tools installed (`build-essential` on Debian/Ubuntu, or the equivalent packages on your distribution).
+- **macOS**: Xcode Command Line Tools or a full Xcode install, which provides Apple Clang, the SDK headers, and the `make` / `xcodebuild` toolchain used by CMake.
+- **Windows**: Visual Studio 2022 or newer with the **Desktop development with C++** workload enabled. Build from a Developer PowerShell / Developer Command Prompt, or let CMake select the Visual Studio generator automatically.
+
+If CMake cannot find a compiler, verify that `cc`, `c++`, `cl`, or your preferred `gcc` / `clang` binaries are on `PATH`, then rerun configuration. You can also pin a specific compiler explicitly, for example:
+
+```bash
+CC=gcc CXX=g++ cmake -S . -B build
+```
+
+On Windows with Visual Studio, the equivalent flow is typically:
+
+```powershell
+cmake -S . -B build -G "Visual Studio 17 2022"
+cmake --build build --config Release
+```
+
 ## Get the code
 
 ```bash
